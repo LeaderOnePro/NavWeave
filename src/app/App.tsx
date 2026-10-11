@@ -1,15 +1,20 @@
-/** NavWeave planning app: canvas + waypoint editor + preview + export.
+/** NavWeave planning app: canvas + waypoint editor + preview + export +
+ * mavctl dry-run review (Mock default, local opt-in).
  *
- * v0 scope: planning, validation, preview, export/import. The mavctl
- * dry-run bridge lands behind an explicit opt-in (see src/bridge/).
+ * v0 scope: planning, validation, preview, export/import. The local bridge
+ * is dry-run-only; see src/bridge/ and docs/MAVCTL_CONTRACT.md.
  */
 import { useMemo, useRef, useState } from "react";
 
+import { DryRunPanel } from "../components/DryRunPanel";
 import { SafetyBanner } from "../components/SafetyBanner";
 import { MissionMapCanvas } from "../components/MissionMapCanvas";
 import { MissionPreview } from "../components/MissionPreview";
 import { VehicleStatusPanel } from "../components/VehicleStatusPanel";
 import { WaypointList } from "../components/WaypointList";
+import { MockMavctlClient } from "../bridge/MockMavctlClient";
+import { LocalMavctlClient } from "../bridge/LocalMavctlClient";
+import type { BridgeMode, DryRunResult, MockScenario } from "../bridge/types";
 import {
   createMissionFromPlannerState,
   createPlannerStateFromMission,
@@ -25,16 +30,27 @@ export function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bridge state: Mock by default; Local dry-run is an explicit opt-in.
+  const [bridgeMode, setBridgeMode] = useState<BridgeMode>("mock");
+  const [mockScenario, setMockScenario] = useState<MockScenario>("pass");
+  const [localBinary, setLocalBinary] = useState("mavctl");
+  const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
+  const [dryRunBusy, setDryRunBusy] = useState(false);
+
   const mission = useMemo(
     () => createMissionFromPlannerState(planner.planner),
     [planner.planner],
   );
   const issues = useMemo(() => validateMission(mission), [mission]);
   const json = useMemo(() => serializeMission(mission), [mission]);
-  const vehicleStatus = useMemo(
-    () => createMockVehicleStatus(planner.mockToggles),
-    [planner.mockToggles],
-  );
+  const vehicleStatus = useMemo(() => {
+    if (bridgeMode === "mock") {
+      // Sync accessor: the mock client's status honors the scenario
+      // (not_connected renders disconnected) without an async useMemo.
+      return new MockMavctlClient(mockScenario, planner.mockToggles).getStatusSync();
+    }
+    return createMockVehicleStatus(planner.mockToggles);
+  }, [bridgeMode, mockScenario, planner.mockToggles]);
 
   const exportMission = () => {
     const blob = new Blob([`${json}\n`], { type: "application/json" });
@@ -55,29 +71,42 @@ export function App() {
       setImportError(`invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
       return;
     }
-    const missionResult = validateMission(parsed);
-    if (missionResult.length > 0) {
+    const found = validateMission(parsed);
+    if (found.length > 0 || !isMissionV1(parsed)) {
       setImportError(
-        `rejected: ${missionResult.length} validation issue(s), first: ${missionResult[0]?.path} ${missionResult[0]?.message}`,
+        `rejected: ${found.length} validation issue(s), first: ${found[0]?.path} ${found[0]?.message}`,
       );
       return;
     }
-    if (!isMissionV1(parsed)) {
-      setImportError("rejected: not a Mission JSON v1 document");
-      return;
-    }
     setImportError(null);
-    planner.setHome(initialPlannerState().home);
-    const restored = createPlannerStateFromMission(
-      parsed,
-      initialPlannerState().home,
-    );
-    // Replace the whole planner with the imported plan (waypoints + altitude).
+    const home = initialPlannerState().home;
+    planner.setHome(home);
+    const restored = createPlannerStateFromMission(parsed, home);
     planner.setGlobalAltitude(restored.globalAltitudeM);
-    // The hook owns state; reuse update calls for each waypoint is awkward —
-    // import swaps the waypoint array wholesale through setHome + a dedicated
-    // replace below.
     planner.replaceWaypoints(restored.waypoints);
+  };
+
+  const runDryRun = async () => {
+    setDryRunBusy(true);
+    try {
+      const client =
+        bridgeMode === "local"
+          ? new LocalMavctlClient({ binary: localBinary })
+          : new MockMavctlClient(mockScenario, planner.mockToggles);
+      const result = await client.validateMissionDryRun(mission);
+      setDryRunResult(result);
+    } catch (error) {
+      setDryRunResult({
+        ok: false,
+        exit_code: -1,
+        reason: "bridge_error",
+        message: error instanceof Error ? error.message : String(error),
+        hint: null,
+        checks: [],
+      });
+    } finally {
+      setDryRunBusy(false);
+    }
   };
 
   return (
@@ -100,7 +129,7 @@ export function App() {
           onSelectWaypoint={planner.selectWaypoint}
         />
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", flex: 1 }}>
-          <VehicleStatusPanel mode="mock" status={vehicleStatus} />
+          <VehicleStatusPanel mode={bridgeMode} status={vehicleStatus} />
           <div className="panel" data-testid="mock-toggles-panel">
             <h2>Mock state (development)</h2>
             <label style={{ marginRight: "0.75rem" }}>
@@ -164,6 +193,21 @@ export function App() {
             }
             onMove={planner.moveWaypoint}
             onDelete={planner.deleteWaypoint}
+          />
+          <DryRunPanel
+            mode={bridgeMode}
+            scenario={mockScenario}
+            binary={localBinary}
+            isValidMission={issues.length === 0}
+            busy={dryRunBusy}
+            result={dryRunResult}
+            onModeChange={(next) => {
+              setBridgeMode(next);
+              setDryRunResult(null);
+            }}
+            onScenarioChange={setMockScenario}
+            onBinaryChange={setLocalBinary}
+            onRunDryRun={() => void runDryRun()}
           />
           <div className="panel" data-testid="export-import-panel">
             <h2>Export / Import</h2>
