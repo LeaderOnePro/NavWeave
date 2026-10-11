@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Test coverage
+coverage/
+
+# Local env / secrets — never commit
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+
+# mavctl runtime artifacts (NavWeave must never track these)
+eeprom.bin
+*.tlog
+terrain/
+logs/
+MAVCTL_HOME/
+mavctl.sock
+daemon.sock
