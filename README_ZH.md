@@ -120,6 +120,10 @@ NavWeave 只会对一个临时文件运行
   打开 MAVLink 连接、从不 import pymavlink。
 - mavctl 不存在时，NavWeave 在 Mock Mode 下仅用本地校验继续工作。
 
+## 开发工作流
+
+命令、目录结构与 bridge 模式矩阵见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+
 ## 许可证
 
 MIT — 见 [LICENSE](LICENSE)。

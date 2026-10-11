@@ -117,6 +117,11 @@ mode** in the bridge panel; NavWeave will then run
 `mavctl mission upload <temp-file> --confirm --dry-run --json` against a
 temporary file that is deleted afterwards. Nothing is ever uploaded.
 
+## Development workflow
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for commands, layout and the
+bridge-mode matrix.
+
 ## Relation to mavctl
 
 - mavctl is the execution layer and the schema authority
@@ -129,3 +134,5 @@ temporary file that is deleted afterwards. Nothing is ever uploaded.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+[中文说明](README_ZH.md)。
