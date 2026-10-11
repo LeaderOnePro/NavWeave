@@ -62,7 +62,17 @@ export function App() {
   };
 
   const importMission = async (file: File) => {
-    const text = await file.text();
+    // jsdom's File lacks Blob.text(); real browsers have it. Read with
+    // FileReader when text() is unavailable.
+    const text =
+      typeof file.text === "function"
+        ? await file.text()
+        : await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error("could not read file"));
+            reader.readAsText(file);
+          });
     let parsed: unknown;
     try {
       parsed = JSON.parse(text) as unknown;
