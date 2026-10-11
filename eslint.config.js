@@ -18,6 +18,10 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { ignoreRestSiblings: true },
+      ],
       "@typescript-eslint/consistent-type-imports": "warn",
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
