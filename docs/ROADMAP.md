@@ -13,6 +13,10 @@ missions; mavctl executes them safely.**
 
 ## v0.x — Planning depth
 
+- [ ] Local host bridge: a small Node host that exposes the existing
+      `LocalMavctlClient` (dry-run only) to the browser UI — the browser
+      itself cannot spawn processes (TODO recorded in the POC);
+
 - [ ] `mission download` read-only display, diff against the current plan
 - [ ] Land item editing (lat/lon/alt + abort altitude) in the canvas
 - [ ] Multiple saved plans in browser storage

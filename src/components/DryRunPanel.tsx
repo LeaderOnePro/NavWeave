@@ -8,6 +8,8 @@ export interface DryRunPanelProps {
   binary: string;
   isValidMission: boolean;
   busy: boolean;
+  /** Browser POC: spawning mavctl needs the future local host bridge. */
+  localSpawnUnavailable?: boolean;
   result: DryRunResult | null;
   onModeChange(mode: BridgeMode): void;
   onScenarioChange(scenario: MockScenario): void;
@@ -29,6 +31,7 @@ export function DryRunPanel({
   binary,
   isValidMission,
   busy,
+  localSpawnUnavailable = false,
   result,
   onModeChange,
   onScenarioChange,
@@ -91,7 +94,7 @@ export function DryRunPanel({
         <button
           type="button"
           data-testid="run-dry-run-button"
-          disabled={!isValidMission || busy}
+          disabled={!isValidMission || busy || (mode === "local" && localSpawnUnavailable)}
           onClick={onRunDryRun}
         >
           Run dry-run validation
@@ -100,6 +103,16 @@ export function DryRunPanel({
           <span style={{ color: "#e06c75", marginLeft: "0.5rem", fontSize: "0.85rem" }}>
             fix validation issues to enable
           </span>
+        )}
+        {mode === "local" && localSpawnUnavailable && (
+          <p
+            style={{ color: "#9aa4b2", margin: "0.3rem 0 0", fontSize: "0.85rem" }}
+            data-testid="local-spawn-unavailable"
+          >
+            Browser POC: spawning mavctl requires the future local host bridge.
+            The Node-side LocalMavctlClient is implemented and unit-tested; see
+            docs/ROADMAP.md.
+          </p>
         )}
       </div>
 

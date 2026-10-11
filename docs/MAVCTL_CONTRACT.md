@@ -48,6 +48,15 @@ Error payloads follow mavctl's `{"error": {"code", "message", "detail":
 {"reason", "hint", ...}}}` shape; the bridge surfaces `reason`, `message`,
 and `hint` to the UI and renders `detail.checks` when present.
 
+## Browser POC limitation
+
+NavWeave v0 ships as a browser app; a browser cannot spawn local processes.
+`LocalMavctlClient` is therefore implemented as a **Node-only module**,
+fully covered by unit tests with a mocked spawn seam, and is not wired into
+the browser UI — selecting "Local dry-run mode" shows the warning and a
+disabled run button with `localSpawnUnavailable`. Wiring it to a small local
+host bridge is v0.x roadmap work (docs/ROADMAP.md).
+
 ## Local bridge rules (`LocalMavctlClient`)
 
 - spawn with an **argument array** (never a shell string);

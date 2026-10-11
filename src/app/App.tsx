@@ -13,7 +13,6 @@ import { MissionPreview } from "../components/MissionPreview";
 import { VehicleStatusPanel } from "../components/VehicleStatusPanel";
 import { WaypointList } from "../components/WaypointList";
 import { MockMavctlClient } from "../bridge/MockMavctlClient";
-import { LocalMavctlClient } from "../bridge/LocalMavctlClient";
 import type { BridgeMode, DryRunResult, MockScenario } from "../bridge/types";
 import {
   createMissionFromPlannerState,
@@ -89,10 +88,10 @@ export function App() {
   const runDryRun = async () => {
     setDryRunBusy(true);
     try {
-      const client =
-        bridgeMode === "local"
-          ? new LocalMavctlClient({ binary: localBinary })
-          : new MockMavctlClient(mockScenario, planner.mockToggles);
+      // v0: the browser POC cannot spawn local processes. The Node-only
+      // LocalMavctlClient (see src/bridge/LocalMavctlClient.ts) is exercised
+      // by the unit suite; wiring it to a local host bridge is v0.x work.
+      const client = new MockMavctlClient(mockScenario, planner.mockToggles);
       const result = await client.validateMissionDryRun(mission);
       setDryRunResult(result);
     } catch (error) {
@@ -200,6 +199,7 @@ export function App() {
             binary={localBinary}
             isValidMission={issues.length === 0}
             busy={dryRunBusy}
+            localSpawnUnavailable={true}
             result={dryRunResult}
             onModeChange={(next) => {
               setBridgeMode(next);

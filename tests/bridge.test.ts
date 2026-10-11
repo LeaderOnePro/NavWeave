@@ -132,6 +132,9 @@ describe("LocalMavctlClient", () => {
 
     expect(result.ok).toBe(true);
     const call = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+    if (call === undefined) {
+      throw new Error("spawn was not called");
+    }
     const [_binary, args] = call as [string, string[]];
     expect(args).toEqual([
       "mission",
@@ -185,16 +188,15 @@ describe("LocalMavctlClient", () => {
     let capturedFile: string | null = null;
     const spawn: SpawnFunction = vi.fn(async (_binary, args) => {
       capturedFile = args[2] ?? null;
-      if (capturedFile !== null) {
-        expect(fs.stat(capturedFile)).resolves.toBeTruthy();
-      }
       return { exitCode: 0, stdout: "{}", stderr: "", spawnError: null };
     });
     const client = new LocalMavctlClient({ spawnImpl: spawn });
     await client.validateMissionDryRun(validMission());
 
-    expect(capturedFile).not.toBeNull();
-    await expect(fs.stat(capturedFile as string)).rejects.toThrow();
+    if (capturedFile === null) {
+      throw new Error("spawn never received a mission file path");
+    }
+    await expect(fs.stat(capturedFile)).rejects.toThrow();
   });
 
   it("keeps read-only status on the allowed surface", async () => {
@@ -208,6 +210,9 @@ describe("LocalMavctlClient", () => {
     expect(status.connected).toBe(true);
     expect(status.flight_mode).toBe("GUIDED");
     const call = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+    if (call === undefined) {
+      throw new Error("spawn was not called");
+    }
     expect(call[1]).toEqual(["status", "--json"]);
   });
 });

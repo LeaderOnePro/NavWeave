@@ -86,6 +86,7 @@ export class MockMavctlClient implements MavctlClient {
           first === undefined
             ? SCENARIO_OUTCOMES["invalid_mission"].message
             : `mission JSON rejected: ${first.path} ${first.message}`,
+        checks: [],
       });
     }
     const outcome = SCENARIO_OUTCOMES[this.scenario];
